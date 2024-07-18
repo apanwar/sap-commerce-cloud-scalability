@@ -33,8 +33,14 @@ You can adjust the script for your usage by:
 - Updating the `MediaCollection` attributes of your product item model
 - Updating to `MediaContainer` attributes of your product item model
 
-Further feel free to enhance the script as per your need.
+Feel free to enhance the script as per your need.
 
+### Optimizations at source integration / user experience
+#### Backoffice
+If you like to simplify the backoffice user interface to avoid mistakes from the business users. You can update the backoffice configurations of product editor area to ensure that the business user creates the `CatalogUnawareMedia` and `CatalogUnawareMediaContainer` during product enrichments.
+
+#### Integrations
+If there are automations / integrations to create the product media for example: ImpEx, Cloud Hot Folders, etc; It is recommended that you correct the headers to ensure that the Media is created for product as `CatalogUnawareMedia` and the media container is created as `CatalogUnawareMediaContainer`.
 
 >**Disclaimers**
 > - This script creates a sample migration cron job that on execute migrates the media of `apparelProductCatelog`. This script has not been tested extensively on a productive environment. This is recommended to test the script extensively prior to execute it on a productive environment.
