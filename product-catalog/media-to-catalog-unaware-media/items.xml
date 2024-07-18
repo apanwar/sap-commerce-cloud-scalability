@@ -1,0 +1,12 @@
+		<itemtype code="CatalogUnawareMediaContainer" autocreate="true" generate="true" extends="Media"
+						jaloclass="de.hybris.platform.jalo.media.CatalogUnawareMediaContainer">
+			<custom-properties>
+				<property name="catalogItemType"><value>java.lang.Boolean.FALSE</value></property>
+			</custom-properties>
+			<attributes>
+  				<attribute qualifier="catalogVersion" type="CatalogVersion" redeclare="true">
+  					<persistence type="property"/>
+  					<modifiers optional="true" initial="false" />
+  				</attribute>
+  			</attributes>
+		</itemtype>

@@ -3,6 +3,28 @@
 Please refer to the [blog post](https://community.sap.com/t5/crm-and-cx-blogs-by-sap/enhancing-scalability-of-your-product-catalog-with-catalog-unaware-media/ba-p/13762371) to understand the background and the scenarios where it can be useful.
 
 ## How to Migrate
+### Add CatalogUnawareMediaContainer
+The first step for the migration is to introduce `CatalogUnawareMediaContainer` item type. The standard item type of the media container is catalog aware. Since, multiple media containers cannot own a single media. It becomes impossible to refer the same media in the media containers of two or more catalog versions. Hence, introduction of a `CatalogUnawareMediaContainer` is a must for this migration. To create this do the following:
+1. Create the `CatalogUnawareMediaContainer` item type using the following item definition:
+    ```xml
+    <itemtype code="CatalogUnawareMediaContainer" autocreate="true" generate="true" extends="Media"
+                    jaloclass="de.hybris.platform.jalo.media.CatalogUnawareMediaContainer">
+        <custom-properties>
+            <property name="catalogItemType"><value>java.lang.Boolean.FALSE</value></property>
+        </custom-properties>
+        <attributes>
+            <attribute qualifier="catalogVersion" type="CatalogVersion" redeclare="true">
+                <persistence type="property"/>
+                <modifiers optional="true" initial="false" />
+            </attribute>
+        </attributes>
+    </itemtype>
+    ```
+2. Execute the `System Update` to ensure that the `CatalogUnawareMediaContainer` is available to your SAP Commerce persistence.
+
+After this, proceed ahead with the migration script.
+
+### Migration of Media to Catalog Unaware Media & Media Container to Catalog Aware Media Container
 The [ImpEx script](https://github.com/apanwar/sap-commerce-cloud-scalability/blob/main/product-catalog/media-to-catalog-unaware-media/impex/cron-jobs.impex) is a sample to migrates the media of `apparelProductCatalog` to CatalogAware Media. You can import this script to create the cron job and then manually execute it during the quiet business hours,
 
 You can adjust the script for your usage by:

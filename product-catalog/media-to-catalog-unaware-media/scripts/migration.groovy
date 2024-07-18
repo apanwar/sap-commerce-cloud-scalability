@@ -1,6 +1,7 @@
 import de.hybris.platform.catalog.CatalogVersionService
 import de.hybris.platform.catalog.model.CatalogUnawareMediaModel
 import de.hybris.platform.catalog.model.CatalogVersionModel
+import de.hybris.platform.core.model.media.CatalogUnawareMediaContainerModel
 import de.hybris.platform.core.model.media.MediaContainerModel
 import de.hybris.platform.core.model.media.MediaModel
 import de.hybris.platform.core.model.product.ProductModel
@@ -67,19 +68,10 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                                 itemsToSave.add(it)
                             }
                         } else { // Media Container
-                            def containers = propertyValue as Collection<MediaContainerModel>
-                            containers.each { container ->
-                                if (CollectionUtils.isNotEmpty(container.medias)) {
-                                    if (!(container.medias.iterator().next() instanceof CatalogUnawareMediaModel)) {
-                                        itemsToRemove.addAll(container.medias)
-                                        def migratedContainersFromOtherVersion = product.getProperty(attributeName) as Collection<MediaContainerModel>
-                                        def migratedMediasFromOtherVersion = getMatchingContainerMedias(migratedContainersFromOtherVersion, container.qualifier)
-
-                                        container.medias = new ArrayList<>(migratedMediasFromOtherVersion)
-                                        itemsToSave.add(container)
-                                    }
-                                }
-                            }
+                            Collection<CatalogUnawareMediaContainerModel> migratedContainersFromOtherVersion = product.getProperty(attributeName)
+                            def migratedContainers = new ArrayList<CatalogUnawareMediaContainerModel>(migratedContainersFromOtherVersion)
+                            itemsToSave.addAll(migratedContainers)
+                            itemsToRemove.addAll(propertyValue)
                         }
                     } else {
                         if (!(propertyValue instanceof CatalogUnawareMediaModel)) {
@@ -106,18 +98,12 @@ class MediaToCatalogUnawareMediaMigrationUtil {
 
     }
 
-    static def getMatchingContainerMedias(Collection<MediaContainerModel> containers, String qualifier) {
-        for (MediaContainerModel container : containers) {
-            if (container.qualifier == qualifier) {
-                return container.medias
-            }
-        }
-    }
-
     def migrateMediaAttribute(MediaModel media, MediaModel originalMedia) {
         CatalogUnawareMediaModel catalogUnAwareMedia = modelService.create(CatalogUnawareMediaModel)
         catalogUnAwareMedia.code = originalMedia.code
         media.code = 'archived_' + originalMedia.code
+        catalogUnAwareMedia.mediaFormat = media.mediaFormat
+        catalogUnAwareMedia.folder = media.folder
         modelService.saveAll(originalMedia, catalogUnAwareMedia)
         mediaService.copyData(originalMedia, catalogUnAwareMedia)
         return catalogUnAwareMedia
@@ -248,8 +234,10 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                 if (CollectionUtils.isEmpty(mediaContainers)) {
                     LOG.debug('Media container [{}] is empty', it)
                 } else {
+                    def migratedMediaContainers = new ArrayList<CatalogUnawareMediaContainerModel>()
                     mediaContainers.each { mediaContainer ->
                         modelService.refresh(mediaContainer)
+                        CatalogUnawareMediaContainerModel catalogUnawareMediaContainer = modelService.create(CatalogUnawareMediaContainerModel)
                         LOG.debug('!!!!!!!!! Migrating media for media container [{}]', mediaContainer.qualifier)
                         def mediaCollection = mediaContainer.medias
                         def newMediaCollection = new ArrayList()
@@ -266,20 +254,24 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                             }
                         }
                         if (!newMediaCollection.isEmpty()) {
-                            mediaContainer.medias = newMediaCollection
-                            modelService.save(mediaContainer)
+                            catalogUnawareMediaContainer.qualifier = mediaContainer.qualifier
+                            catalogUnawareMediaContainer.medias = newMediaCollection
+                            toRemove.add(mediaContainer)
+                            modelService.save(catalogUnawareMediaContainer)
+                            migratedMediaContainers.add(catalogUnawareMediaContainer)
                             modelService.removeAll(toRemove)
                         }
 
-                        LOG.debug('Migrated media for media container [{}] !!!!!!!!', mediaContainer.qualifier)
+                        LOG.debug('Migrated media for media container [{}] !!!!!!!!', catalogUnawareMediaContainer.qualifier)
                     }
+                    modelService.setAttributeValue(product, it, migratedMediaContainers)
                 }
             }
         }
     }
 
     def migrateProductMediaForCatalogVersion(CatalogVersionModel catalogVersion, int batchSize) {
-        def query = 'SELECT {PK} FROM {Product} WHERE {catalogVersion}=?catalogVersion'
+        def query = 'SELECT {PK} FROM {Product} WHERE {code}=?code AND {catalogVersion}=?catalogVersion'
 
         def paginationData = new PaginationData()
         paginationData.pageSize = batchSize
@@ -289,6 +281,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         searchPageData.pagination = paginationData
 
         def fsq = new FlexibleSearchQuery(query)
+        fsq.addQueryParameter('code', '29532')
         fsq.addQueryParameter('catalogVersion', catalogVersion)
         fsq.disableSearchRestrictions = true
 
@@ -301,7 +294,9 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         userService.setCurrentUser(userService.getAdminUser())
 
         while (true) {
+            LOG.info('*******************************************')
             LOG.info('Starting migration of batch: {}', searchPageData.pagination.currentPage + 1)
+            LOG.info('*******************************************')
             searchPageData = paginatedFlexibleSearchService.<ProductModel> search(pfsParam)
             searchPageData.results.each {
                 LOG.info('Processing media migration for product [{}]', it.code)
@@ -321,10 +316,12 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                 LOG.info('Processed media migration for product [{}]', it.code)
             }
 
+            LOG.info('*******************************************')
             LOG.info('Completed migration of batch: {}', searchPageData.pagination.currentPage + 1)
+            LOG.info('*******************************************')
 
             if (searchPageData.pagination.hasNext) {
-                searchPageData.pagination.currentPage = paginationData.currentPage + 1
+                searchPageData.pagination.currentPage = searchPageData.pagination.currentPage + 1
             } else {
                 break
             }
