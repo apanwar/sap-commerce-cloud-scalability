@@ -272,7 +272,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
     }
 
     def migrateProductMediaForCatalogVersion(CatalogVersionModel catalogVersion, int batchSize) {
-        def query = 'SELECT {PK} FROM {Product} WHERE {code}=?code AND {catalogVersion}=?catalogVersion'
+        def query = 'SELECT {PK} FROM {Product} WHERE {catalogVersion}=?catalogVersion'
 
         def paginationData = new PaginationData()
         paginationData.pageSize = batchSize
@@ -282,7 +282,6 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         searchPageData.pagination = paginationData
 
         def fsq = new FlexibleSearchQuery(query)
-        fsq.addQueryParameter('code', '29532')
         fsq.addQueryParameter('catalogVersion', catalogVersion)
         fsq.disableSearchRestrictions = true
 
