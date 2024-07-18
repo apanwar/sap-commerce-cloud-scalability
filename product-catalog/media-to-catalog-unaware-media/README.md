@@ -24,7 +24,7 @@ The first step for the migration is to introduce `CatalogUnawareMediaContainer` 
 
 After this, proceed ahead with the migration script.
 
-### Migration of Media to Catalog Unaware Media & Media Container to Catalog Aware Media Container
+### Migration of Media to Catalog Unaware Media & Media Container to Catalog Unaware Media Container
 The [ImpEx script](https://github.com/apanwar/sap-commerce-cloud-scalability/blob/main/product-catalog/media-to-catalog-unaware-media/impex/cron-jobs.impex) is a sample to migrates the media of `apparelProductCatalog` to CatalogAware Media. You can import this script to create the cron job and then manually execute it during the quiet business hours,
 
 You can adjust the script for your usage by:
