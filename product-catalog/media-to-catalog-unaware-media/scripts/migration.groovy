@@ -265,6 +265,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                         LOG.debug('Migrated media for media container [{}] !!!!!!!!', catalogUnawareMediaContainer.qualifier)
                     }
                     modelService.setAttributeValue(product, it, migratedMediaContainers)
+                    modelService.save(product)
                 }
             }
         }
