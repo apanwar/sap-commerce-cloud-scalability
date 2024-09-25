@@ -44,7 +44,10 @@ class MediaToCatalogUnawareMediaMigrationUtil {
     static def getItemsToRemoveFromCollection(Collection<MediaModel> collection) {
         def itemsToRemove = new ArrayList<MediaModel>()
         collection.each {
-            if (!(it instanceof CatalogUnawareMediaModel)) {
+            if (it instanceof CatalogUnawareMediaModel) {
+                LOG.warn('Media {} is catalog unaware. No need to remove it', it)
+            }else{
+                LOG.debug('Media {} is catalog aware. Need to remove it', it)
                 itemsToRemove.add(it)
             }
         }
@@ -58,7 +61,12 @@ class MediaToCatalogUnawareMediaMigrationUtil {
             if (!mediasToRemove.isEmpty()) {
                 itemsToRemove.addAll(mediasToRemove)
             }
-            itemsToRemove.add(it)
+            if(it instanceof CatalogUnawareMediaContainerModel){
+                LOG.warn('Container {} is catalog unaware. No need to remove it', it)
+            }else{
+                LOG.debug('Container {} is catalog aware. Need to remove it', it)
+                itemsToRemove.add(it)
+            }
         }
         return itemsToRemove
     }
@@ -81,7 +89,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                 if (propertyValue) {
                     if (propertyValue instanceof Collection) {
                         if (propertyValue.isEmpty()) {
-                            LOG.debug('Empty collection. Ignoring...')
+                            LOG.info('Empty collection. Ignoring...')
                         } else if (propertyValue.iterator().next() instanceof CatalogUnawareMediaModel) {
                             itemsToRemove.addAll(getItemsToRemoveFromCollection(it.getProperty(attributeName)))
                             def migratedCollection = propertyValue as Collection<CatalogUnawareMediaModel>
@@ -90,16 +98,18 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                             itemsToSave.add(it)
                         } else if (propertyValue.iterator().next() instanceof CatalogUnawareMediaContainerModel) {
                             // Media Container
-
+                            LOG.info('Updating containers from other version')
                             itemsToRemove.addAll(getItemsToRemoveFromContainers(it.getProperty(attributeName)))
 
                             Collection<CatalogUnawareMediaContainerModel> migratedContainersFromOtherVersion = product.getProperty(attributeName)
+                            
                             def migratedContainers = new ArrayList<CatalogUnawareMediaContainerModel>()
                             migratedContainers.addAll(migratedContainersFromOtherVersion)
+                            LOG.info('Found '+ migratedContainers.size() + ' Migrated containers from other versions')
                             modelService.setAttributeValue(it, attributeName, migratedContainers)
                             itemsToSave.add(it)
                         } else {
-                            LOG.debug('Unknown collection. Ignoring...')
+                            LOG.info('Unknown collection. Ignoring...')
                         }
                     } else if (propertyValue instanceof CatalogUnawareMediaModel) {
                         if (!(it.getProperty(attributeName) instanceof CatalogUnawareMediaModel)) {
@@ -113,10 +123,16 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         }
 
         if (CollectionUtils.isNotEmpty(itemsToSave)) {
+            LOG.info('Items to save {}', itemsToSave)
             modelService.saveAll(itemsToSave)
+        }else{
+            LOG.warn('Nothing to save !!!')
         }
         if (CollectionUtils.isNotEmpty(itemsToRemove)) {
+            LOG.info('Items to remove {}', itemsToRemove)
             modelService.removeAll(itemsToRemove)
+        }else{
+            LOG.warn('Nothing to remove !!!')
         }
 
     }
@@ -142,16 +158,16 @@ class MediaToCatalogUnawareMediaMigrationUtil {
             attributes.each {
                 def originalMedia = product.getProperty(it) as MediaModel
                 if (originalMedia && !(originalMedia instanceof CatalogUnawareMediaModel)) {
-                    LOG.debug('**** Migrating media assigned to [{}] attribute is [{}]', it, originalMedia.code)
-                    LOG.debug('Media type before migration [{}]', originalMedia.itemtype)
+                    LOG.info('**** Migrating media assigned to [{}] attribute is [{}]', it, originalMedia.code)
+                    LOG.info('Media type before migration [{}]', originalMedia.itemtype)
                     def migratedMedia = migrateMediaAttribute(originalMedia)
                     modelService.setAttributeValue(product, it, migratedMedia)
                     modelService.save(product)
                     this.replaceMediaInMediaCollections(product, originalMedia, migratedMedia, collectionAttributes)
                     this.replaceMediaInMediaContainers(product, originalMedia, migratedMedia, containerAttributes)
                     modelService.remove(originalMedia)
-                    LOG.debug('Media type after migration [{}]', migratedMedia.itemtype)
-                    LOG.debug('Migrated media assigned to [{}] attribute is [{}] ****', it, migratedMedia.code)
+                    LOG.info('Media type after migration [{}]', migratedMedia.itemtype)
+                    LOG.info('Migrated media assigned to [{}] attribute is [{}] ****', it, migratedMedia.code)
                 }
             }
         }
@@ -161,14 +177,14 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         if (collections) {
             collections.each {
                 modelService.refresh(product)
-                LOG.debug('Replace media [{}] references in media collection attribute [{}]', original.code, it)
+                LOG.info('Replace media [{}] references in media collection attribute [{}]', original.code, it)
                 def mediaCollection = product.getProperty(it) as Collection<MediaModel>
                 def newCollection = getUpdatedMediaCollection(mediaCollection, original, migrated)
                 if (null != newCollection) {
                     modelService.setAttributeValue(product, it, newCollection)
                     modelService.save(product)
                 }
-                LOG.debug('Replaced media [{}] references in media collection attribute [{}]', original.code, it)
+                LOG.info('Replaced media [{}] references in media collection attribute [{}]', original.code, it)
             }
         }
     }
@@ -181,14 +197,14 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                 if (CollectionUtils.isNotEmpty(mediaContainers)) {
                     mediaContainers.each { mediaContainer ->
                         modelService.refresh(mediaContainer)
-                        LOG.debug('Replace media [{}] references in media container [{}]', original.code, mediaContainer.qualifier)
+                        LOG.info('Replace media [{}] references in media container [{}]', original.code, mediaContainer.qualifier)
                         def mediaCollection = mediaContainer.medias
                         def newCollection = getUpdatedMediaCollection(mediaCollection, original, migrated)
                         if (null != newCollection) {
                             mediaContainer.medias = newCollection
                             modelService.save(mediaContainer)
                         }
-                        LOG.debug('Replaced media [{}] references in media container [{}]', original.code, mediaContainer.qualifier)
+                        LOG.info('Replaced media [{}] references in media container [{}]', original.code, mediaContainer.qualifier)
                     }
                 }
             }
@@ -218,10 +234,10 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                 modelService.refresh(product)
                 def mediaCollection = product.getProperty(it) as Collection<MediaModel>
                 def newMediaCollection = new ArrayList<MediaModel>()
-                LOG.debug('###### Migrating media collection assigned to [{}]', it)
+                LOG.info('###### Migrating media collection assigned to [{}]', it)
                 remainingCollections.remove(it)
                 if (CollectionUtils.isEmpty(mediaCollection)) {
-                    LOG.debug('No media available in collection assigned to [{}]', it)
+                    LOG.info('No media available in collection assigned to [{}]', it)
                 } else {
                     mediaCollection.each { originalMedia ->
                         if (originalMedia instanceof CatalogUnawareMediaModel) {
@@ -230,14 +246,14 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                             def migratedMedia = migrateMediaAttribute(originalMedia)
                             newMediaCollection.add(migratedMedia)
                             if (!remainingCollections.isEmpty()) {
-                                LOG.debug('Replace media [{}] in other collections', originalMedia.code)
+                                LOG.info('Replace media [{}] in other collections', originalMedia.code)
                                 this.replaceMediaInMediaCollections(product, originalMedia, migratedMedia, remainingCollections)
-                                LOG.debug('Replaced media [{}] in other collections', originalMedia.code)
+                                LOG.info('Replaced media [{}] in other collections', originalMedia.code)
                             }
 
-                            LOG.debug('Replace media [{}] references in media containers', originalMedia.code)
+                            LOG.info('Replace media [{}] references in media containers', originalMedia.code)
                             this.replaceMediaInMediaContainers(product, originalMedia, migratedMedia, containers)
-                            LOG.debug('Replaced media [{}] references in media containers', originalMedia.code)
+                            LOG.info('Replaced media [{}] references in media containers', originalMedia.code)
 
                         }
 
@@ -251,7 +267,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                             }
                         }
                     }
-                    LOG.debug('Migrated media collection assigned to [{}] ######', it)
+                    LOG.info('Migrated media collection assigned to [{}] ######', it)
                 }
             }
         }
@@ -263,33 +279,37 @@ class MediaToCatalogUnawareMediaMigrationUtil {
             attributes.each {
                 def mediaContainers = product.getProperty(it) as Collection<MediaContainerModel>
                 if (CollectionUtils.isEmpty(mediaContainers)) {
-                    LOG.debug('Media container [{}] is empty', it)
+                    LOG.info('Media container [{}] is empty', it)
                 } else {
                     def migratedMediaContainers = new ArrayList<CatalogUnawareMediaContainerModel>()
                     mediaContainers.each { mediaContainer ->
                         modelService.refresh(mediaContainer)
                         if (mediaContainer instanceof CatalogUnawareMediaContainerModel) {
+                            LOG.info('Container is already migrated')
                             migratedMediaContainers.add(mediaContainer)
                         } else {
                             CatalogUnawareMediaContainerModel catalogUnawareMediaContainer = modelService.create(CatalogUnawareMediaContainerModel)
-                            LOG.debug('!!!!!!!!! Migrating media for media container [{}]', mediaContainer.qualifier)
+                            LOG.info('!!!!!!!!! Migrating media for media container [{}]', mediaContainer.qualifier)
                             def mediaCollection = mediaContainer.medias
                             def newMediaCollection = new ArrayList()
                             def toRemove = []
                             mediaCollection.each { originalMedia ->
                                 if (originalMedia instanceof CatalogUnawareMediaModel) {
-                                    newMediaCollection.addAll(originalMedia)
+
+                                    newMediaCollection.add(originalMedia)
                                 } else {
-                                    LOG.debug('Migrating media assigned to [{}] attribute is [{}]', it, originalMedia.code)
-                                    LOG.debug('Media type before migration [{}]', originalMedia.itemtype)
+                                    LOG.info('Migrating media assigned to [{}] attribute is [{}]', it, originalMedia.code)
+                                    LOG.info('Media type before migration [{}]', originalMedia.itemtype)
                                     def migratedMedia = migrateMediaAttribute(originalMedia)
                                     newMediaCollection.add(migratedMedia)
                                     toRemove.add(originalMedia)
-                                    LOG.debug('Media type after migration [{}]', migratedMedia.itemtype)
-                                    LOG.debug('Migrated media assigned to [{}] attribute is [{}]', it, migratedMedia.code)
+                                    LOG.info('Media type after migration [{}]', migratedMedia.itemtype)
+                                    LOG.info('Migrated media assigned to [{}] attribute is [{}]', it, migratedMedia.code)
                                 }
                             }
-                            if (!newMediaCollection.isEmpty()) {
+                            if (newMediaCollection.isEmpty()) {
+                                LOG.info('No new collection')
+                            }else{
                                 catalogUnawareMediaContainer.qualifier = mediaContainer.qualifier
                                 catalogUnawareMediaContainer.medias = newMediaCollection
                                 toRemove.add(mediaContainer)
@@ -297,7 +317,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                                 migratedMediaContainers.add(catalogUnawareMediaContainer)
                                 modelService.removeAll(toRemove)
                             }
-                            LOG.debug('Migrated media for media container [{}] !!!!!!!!', catalogUnawareMediaContainer.qualifier)
+                            LOG.info('Migrated media for media container [{}] !!!!!!!!', catalogUnawareMediaContainer.qualifier)
                         }
                     }
                     if (CollectionUtils.isNotEmpty(migratedMediaContainers)) {
@@ -373,7 +393,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
 
 }
 
-def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('apparelProductCatalog', 'Online')
+def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('master', 'Staged')
 
 def migrationUtility = MediaToCatalogUnawareMediaMigrationUtil.getInstance()
 
