@@ -393,7 +393,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
 
 }
 
-def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('master', 'Staged')
+def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('apparelProductCatalog', 'Online')
 
 def migrationUtility = MediaToCatalogUnawareMediaMigrationUtil.getInstance()
 

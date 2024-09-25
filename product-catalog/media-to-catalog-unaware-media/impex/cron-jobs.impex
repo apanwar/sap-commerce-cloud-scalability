@@ -46,7 +46,10 @@ class MediaToCatalogUnawareMediaMigrationUtil {
     static def getItemsToRemoveFromCollection(Collection<MediaModel> collection) {
         def itemsToRemove = new ArrayList<MediaModel>()
         collection.each {
-            if (!(it instanceof CatalogUnawareMediaModel)) {
+            if (it instanceof CatalogUnawareMediaModel) {
+                LOG.warn('Media {} is catalog unaware. No need to remove it', it)
+            }else{
+                LOG.debug('Media {} is catalog aware. Need to remove it', it)
                 itemsToRemove.add(it)
             }
         }
@@ -60,7 +63,12 @@ class MediaToCatalogUnawareMediaMigrationUtil {
             if (!mediasToRemove.isEmpty()) {
                 itemsToRemove.addAll(mediasToRemove)
             }
-            itemsToRemove.add(it)
+            if(it instanceof CatalogUnawareMediaContainerModel){
+                LOG.warn('Container {} is catalog unaware. No need to remove it', it)
+            }else{
+                LOG.debug('Container {} is catalog aware. Need to remove it', it)
+                itemsToRemove.add(it)
+            }
         }
         return itemsToRemove
     }
