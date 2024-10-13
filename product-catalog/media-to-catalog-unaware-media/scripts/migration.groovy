@@ -1,5 +1,3 @@
-package mediamigration
-
 import de.hybris.platform.catalog.CatalogVersionService
 import de.hybris.platform.catalog.model.CatalogUnawareMediaModel
 import de.hybris.platform.catalog.model.CatalogVersionModel
@@ -356,7 +354,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
 
     def migrateProductMediaForCatalogVersion(CatalogVersionModel catalogVersion, int batchSize) {
         try {
-            def query = "SELECT {${ProductModel.PK}} FROM {${ProductModel._TYPECODE}} WHERE {${ProductModel.CATALOGVERSION}}=?${ProductModel.CATALOGVERSION} ORDER BY {${ProductModel.CREATIONTIME}}"
+            def query = 'SELECT {' + ProductModel.PK + '} FROM {' + ProductModel._TYPECODE + '} WHERE {' + ProductModel.CATALOGVERSION + '} =?' + ProductModel.CATALOGVERSION + ' ORDER BY { ' + ProductModel.CREATIONTIME + '}'
 
             def paginationData = new PaginationData()
             paginationData.pageSize = batchSize
@@ -429,3 +427,4 @@ migrationUtility.paginatedFlexibleSearchService = spring.getBean('paginatedFlexi
 migrationUtility.userService = spring.getBean('userService')
 
 migrationUtility.migrateProductMediaForCatalogVersion(catalogVersion, 100)
+
