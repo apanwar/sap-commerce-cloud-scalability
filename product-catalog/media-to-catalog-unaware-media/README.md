@@ -47,6 +47,36 @@ If you like to simplify the backoffice user interface to avoid mistakes from the
 #### Integrations
 If there are automations / integrations to create the product media for example: ImpEx, Cloud Hot Folders, etc; It is recommended that you correct the headers to ensure that the Media is created for product as `CatalogUnawareMedia` and the media container is created as `CatalogUnawareMediaContainer`.
 
+#### Media Conversion
+If you are using media conversion then make sure to create a class `CatalogUnawareConvertedMediaCreationStrategy` by overriding `DefaultConvertedMediaCreationStrategy` to ensure that your converted media are created as `CatalogUnawareMedia` as:
+
+```
+package com.sap.cx.boosters.commerce.media.migration.strategy;
+
+import de.hybris.platform.catalog.model.CatalogUnawareMediaModel;
+import de.hybris.platform.core.model.media.MediaModel;
+import de.hybris.platform.mediaconversion.conversion.DefaultConvertedMediaCreationStrategy;
+
+public class CatalogUnawareConvertedMediaCreationStrategy extends DefaultConvertedMediaCreationStrategy {
+
+    @Override
+    protected MediaModel createModel() {
+        return this.getModelService().create(CatalogUnawareMediaModel.class);
+    }
+}
+```
+
+Also register the following spring bean:
+
+```
+<alias name="catalogUnawareConvertedMediaCreationStrategy" alias="convertedMediaCreationStrategy"/>
+<bean id="catalogUnawareConvertedMediaCreationStrategy" class="com.sap.cx.boosters.commerce.media.migration.strategy.CatalogUnawareConvertedMediaCreationStrategy" parent="defaultConvertedMediaCreationStrategy"/>
+
+```
+
+>Note: Please adjust package structure as per your project's package structure.
+
+
 >**Disclaimers**
 > - This script creates a sample migration cron job that on execute migrates the media of `apparelProductCatelog`. This script has not been tested extensively on a productive environment. This is recommended to test the script extensively prior to execute it on a productive environment.
 > - This is recommended to execute such a migration in Off-Peak hours as this migration may impact customer experience.
