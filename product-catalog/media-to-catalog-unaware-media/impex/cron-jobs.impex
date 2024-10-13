@@ -1,7 +1,5 @@
 INSERT_UPDATE Script; code[unique=true]; active[unique=true];scriptType(code);content
 ;productMediaToCatalogAwareMediaMigrationScript; true; GROOVY;"
-package mediamigration
-
 import de.hybris.platform.catalog.CatalogVersionService
 import de.hybris.platform.catalog.model.CatalogUnawareMediaModel
 import de.hybris.platform.catalog.model.CatalogVersionModel
