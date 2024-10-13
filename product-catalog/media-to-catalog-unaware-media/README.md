@@ -75,7 +75,9 @@ Also register the following spring bean:
 ```
 
 >**Note 1:** Please adjust package structure as per your project's package structure.
+
 >**Note 2:** As an alternative, You can extract and use the mediamigration extension available [here](./mediamigration.zip)
+
 
 
 >**Disclaimers**
