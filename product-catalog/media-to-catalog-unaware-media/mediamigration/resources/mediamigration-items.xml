@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ Copyright (c) 2024 SAP SE or an SAP affiliate company. All rights reserved.
+-->
+<items xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="items.xsd">
+
+    <itemtypes>
+        <itemtype code="CatalogUnawareMediaContainer" autocreate="true" generate="true" extends="MediaContainer"
+                  jaloclass="de.hybris.platform.jalo.media.CatalogUnawareMediaContainer">
+            <custom-properties>
+                <property name="catalogItemType">
+                    <value>java.lang.Boolean.FALSE</value>
+                </property>
+            </custom-properties>
+            <attributes>
+                <attribute qualifier="catalogVersion" type="CatalogVersion" redeclare="true">
+                    <persistence type="property"/>
+                    <modifiers optional="true" initial="false"/>
+                </attribute>
+            </attributes>
+        </itemtype>
+    </itemtypes>
+</items>
