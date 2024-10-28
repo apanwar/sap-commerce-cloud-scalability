@@ -45,8 +45,6 @@ If there are automations / integrations to create the product media for example:
 ### Media Conversion
 The extension covers you if youn are using the media conversion functionality. With this the regular Media converts in the disired formats as regular media and the Catalog Unaware Media converts in the disired formats as catalog unaware media.
 
->**Note 2:** As an alternative, You can use the mediamigration extension available [here](./mediamigration), followed by a system update and configurion & execution of the `CatalogAwareToCatalogUnawareMediaMigrationCronJob` cron job with job as catalogAwareToCatalogUnawareMediaMigrationJob`.
-
 
 
 >**Disclaimers**
