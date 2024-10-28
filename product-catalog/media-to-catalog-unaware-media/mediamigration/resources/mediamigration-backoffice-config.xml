@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ~ Copyright (c) 2022. SAP SE or an SAP affiliate company. All rights reserved.
+  -->
+
+<config xmlns:y="http://www.hybris.com/cockpit/config/hybris"
+        xmlns:wz="http://www.hybris.com/cockpitng/config/wizard-config"
+        xmlns:list-view="http://www.hybris.com/cockpitng/component/listView"
+        xmlns:tree="http://www.hybris.com/cockpitng/component/treeCollection"
+        xmlns:as="http://www.hybris.com/cockpitng/config/advancedsearch"
+        xmlns:ss="http://www.hybris.com/cockpitng/config/simplesearch"
+        xmlns:ea="http://www.hybris.com/cockpitng/component/editorArea"
+        xmlns="http://www.hybris.com/cockpit/config">
+
+    <context type="CatalogUnawareMediaContainer">
+        <context component="base" merge-by="type" parent="MediaContainer">
+            <y:base xmlns:y="http://www.hybris.com/cockpit/config/hybris">
+                <y:labels>
+                    <y:label>(name?:'')+' ['+qualifier+']'</y:label>
+                </y:labels>
+            </y:base>
+        </context>
+    </context>
+
+    <context merge-by="type" parent="CronJob" type="CatalogAwareToCatalogUnawareMediaMigrationCronJob" component="editor-area">
+        <ea:editorArea name="">
+            <ea:tab name="hmc.tab.cronjob.processas" merge-mode="append">
+                <ea:section name="hmc.section.cronjob.migration" description="hmc.text.cronjob.migration">
+                    <ea:attribute qualifier="batchSize"/>
+                    <ea:attribute qualifier="migrationWorkers"/>
+                    <ea:attribute qualifier="referenceCatalogVersion"/>
+                </ea:section>
+            </ea:tab>
+        </ea:editorArea>
+    </context>
+
+</config>
