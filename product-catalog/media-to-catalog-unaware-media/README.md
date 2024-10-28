@@ -18,7 +18,7 @@ The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration
 - Reference catalog version to configura the catalog version that has all accurate medias associated across the product catalog versions.
 
 <p>
-<img src="cron-job-configurations.png" style="border: 2px;">
+<img src="./cron-job-configurations.png" style="border: 2px;">
 <u><strong>Figure </strong> | Migration Cron Job Configurations</u>
 </p>
 
