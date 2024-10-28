@@ -4,24 +4,12 @@ Please refer to the [blog post](https://community.sap.com/t5/crm-and-cx-blogs-by
 
 ## Introducing CatalogUnawareMediaContainer
 The first step for the using `CatalogUnawareMedia` for products is to introduce `CatalogUnawareMediaContainer` item type to support it with `gallery` images. The standard item type of the media container is catalog aware. Since, multiple media containers cannot own a single media. It becomes impossible to refer the same media in the media containers of two or more catalog versions. Hence, introduction of a `CatalogUnawareMediaContainer` is a must for this migration. To create this do the following:
-1. Create the `CatalogUnawareMediaContainer` item type using the following item definition:
-    ```xml
-    <itemtype code="CatalogUnawareMediaContainer" autocreate="true" generate="true" extends="MediaContainer"
-                    jaloclass="de.hybris.platform.jalo.media.CatalogUnawareMediaContainer">
-        <custom-properties>
-            <property name="catalogItemType"><value>java.lang.Boolean.FALSE</value></property>
-        </custom-properties>
-        <attributes>
-            <attribute qualifier="catalogVersion" type="CatalogVersion" redeclare="true">
-                <persistence type="property"/>
-                <modifiers optional="true" initial="false" />
-            </attribute>
-        </attributes>
-    </itemtype>
-    ```
-2. Execute the `System Update` to ensure that the `CatalogUnawareMediaContainer` is available to your SAP Commerce persistence.
+1. Create the `CatalogUnawareMediaContainer` item type using the following item definition. Refer to the [item configuration](./mediamigration/resources/mediamigration-items.xml).
+2. The next step is to implement a cron job that migrated the Catalog Aware Media to Catalog Unaware Media. Refer to the [Job implementation](./mediamigration/src/com/sap/cx/boosters/commerce/media/migration/job/CatalogAwareToCatalogUnawareMediaMigrationJob.java). This job is a multi-threaded job to migrate the product medias in a configurable batch size. Also the reference catalog version can be configuredc with the cron job. Please refere to the Cron Job definition in the item definition of [CatalogAwareToCatalogUnawareMediaMigrationCronJob](./mediamigration/resources/mediamigration-items.xml)
 
-After this, proceed ahead with configuration of the migration cron job.
+3. The next step is to build and execute the `System Update` to ensure that the `CatalogUnawareMediaContainer` and the job is available to your SAP Commerce cloud environment.
+
+4. After this, proceed ahead with configuration and execution of the migration cron job.
 
 ## Configuring the Cron job for Migration of Media to Catalog Unaware Media & Media Container to Catalog Unaware Media Container
 The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration.impex) is a sample script as commented to create a cron job to migrate the media of `apparelProductCatalog` to CatalogAware Media. You can adjust this ImpEx script to create the cron job and then execute it during the quiet business hours with following adjustments:
