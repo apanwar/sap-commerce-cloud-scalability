@@ -1,0 +1,38 @@
+$jarResource = jar:com.sap.cx.boosters.commerce.media.migration.constants.MediamigrationConstants&/impex/test
+
+INSERT_UPDATE Catalog; id[unique = true]         ; name                         ; languages(isocode)
+                     ; masterProductCatalog      ; Master Product Catalog       ; en
+                     ; firstChildProductCatalog  ; First Child Product Catalog  ; en
+                     ; secondChildProductCatalog ; Second Child Product Catalog ; en
+
+INSERT_UPDATE CatalogVersion; catalog(id)[unique = true]; version[unique = true]; languages(isocode)
+                            ; masterProductCatalog      ; Staged                ; en
+                            ; firstChildProductCatalog  ; Staged                ; en
+                            ; firstChildProductCatalog  ; Online                ; en
+                            ; secondChildProductCatalog ; Staged                ; en
+                            ; secondChildProductCatalog ; Online                ; en
+
+
+INSERT_UPDATE ConversionMediaFormat; qualifier[unique = true]; name[lang = en]; conversionStrategy                 ; conversion
+                                   ; icon                    ; Icon           ; imageMagickMediaConversionStrategy ; -resize 30x30
+                                   ; thumbnail               ; Thumbnail      ; imageMagickMediaConversionStrategy ; -resize 65x65
+                                   ; list                    ; Hitlist        ; imageMagickMediaConversionStrategy ; -resize 96x96
+                                   ; detail                  ; Thumbnail      ; imageMagickMediaConversionStrategy ; -resize 300x300
+                                   ; pdp                     ; Detail         ; imageMagickMediaConversionStrategy ; -resize 1000x1000
+#
+# Default ConversionGroup
+#
+INSERT_UPDATE ConversionGroup; code[unique = true]    ; name[lang = en]           ; supportedFormats(qualifier)
+                             ; DefaultConversionGroup ; Default conversion format ; icon, thumbnail, list, detail, pdp
+
+INSERT_UPDATE MediaContainer; qualifier[unique = true]; catalogVersion(catalog(id), version); name[lang = en]         ; conversionGroup(code)
+                            ; DV3337-101-Gallery      ; masterProductCatalog:Staged         ; Nike Air Max DN Gallery ; DefaultConversionGroup
+
+INSERT_UPDATE Media; code[unique = true] ; catalogVersion(catalog(id), version); @media[translator = de.hybris.platform.impex.jalo.media.MediaDataTranslator]; mediaContainer(qualifier, catalogVersion(catalog(id), version))
+                   ; air-max-dn-original ; masterProductCatalog:Staged         ; $jarResource/AIR-MAX-DN.jpg                                                 ; DV3337-101-Gallery:masterProductCatalog:Staged
+
+INSERT_UPDATE Product; code[unique = true]; catalogVersion(catalog(id), version); name[lang = en] ; picture(code, catalogVersion(catalog(id), version)); galleryImages(qualifier, catalogVersion(catalog(id), version))
+                     ; DV3337-101         ; masterProductCatalog:Staged         ; Nike Air Max DN ; air-max-dn-original:masterProductCatalog:Staged    ; DV3337-101-Gallery:masterProductCatalog:Staged
+
+INSERT_UPDATE CatalogAwareToCatalogUnawareMediaMigrationCronJob; code[unique = true]                                         ; job(code)                                     ; batchSize; migrationWorkers; referenceCatalogVersion(catalog(id), version); sessionLanguage(isoCode)[default = en]; sessionUser(uid)[default = 'admin']
+                                                               ; productCatalogAwareMediaToCatalogAwareMediaMigrationCronJob ; catalogAwareToCatalogUnawareMediaMigrationJob ; 100      ; 2               ; secondChildProductCatalog:Online

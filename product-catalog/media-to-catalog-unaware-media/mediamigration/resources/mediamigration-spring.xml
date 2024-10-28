@@ -4,10 +4,46 @@
 -->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans
-           http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
     <alias name="catalogUnawareConvertedMediaCreationStrategy" alias="convertedMediaCreationStrategy"/>
-    <bean id="catalogUnawareConvertedMediaCreationStrategy" class="com.sap.cx.boosters.commerce.media.migration.strategy.CatalogUnawareConvertedMediaCreationStrategy" parent="defaultConvertedMediaCreationStrategy"/>
+    <bean id="catalogUnawareConvertedMediaCreationStrategy"
+          class="com.sap.cx.boosters.commerce.media.migration.strategy.CatalogUnawareConvertedMediaCreationStrategy"
+          parent="defaultConvertedMediaCreationStrategy"/>
+
+    <alias name="defaultMediaMigrationProcessor" alias="mediaMigrationProcessor"/>
+    <bean id="defaultMediaMigrationProcessor"
+          class="com.sap.cx.boosters.commerce.media.migration.processor.impl.DefaultMediaMigrationProcessor">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+        <property name="mediaService" ref="mediaService"/>
+        <property name="modelService" ref="modelService"/>
+        <property name="mediaAttributes">
+            <util:list value-type="java.lang.String">
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.PICTURE"/>
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.THUMBNAIL"/>
+            </util:list>
+        </property>
+        <property name="mediaCollectionAttributes">
+            <util:list value-type="java.lang.String">
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.DETAIL"/>
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.LOGO"/>
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.NORMAL"/>
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.OTHERS"/>
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.THUMBNAILS"/>
+            </util:list>
+        </property>
+        <property name="mediaContainerAttributes">
+            <util:list value-type="java.lang.String">
+                <util:constant static-field="de.hybris.platform.core.model.product.ProductModel.GALLERYIMAGES"/>
+            </util:list>
+        </property>
+    </bean>
+
+    <bean id="catalogAwareToCatalogUnawareMediaMigrationJob" class="com.sap.cx.boosters.commerce.media.migration.job.CatalogAwareToCatalogUnawareMediaMigrationJob" parent="abstractJobPerformable">
+        <property name="mediaMigrationProcessor" ref="mediaMigrationProcessor" />
+        <property name="paginatedFlexibleSearchService" ref="paginatedFlexibleSearchService" />
+    </bean>
 
 </beans>

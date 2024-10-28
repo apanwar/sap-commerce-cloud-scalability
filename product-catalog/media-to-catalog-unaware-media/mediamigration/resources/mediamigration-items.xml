@@ -20,5 +20,23 @@
                 </attribute>
             </attributes>
         </itemtype>
+
+        <itemtype code="CatalogAwareToCatalogUnawareMediaMigrationCronJob" extends="CronJob">
+            <attributes>
+                <attribute qualifier="batchSize" type="java.lang.Integer">
+                    <modifiers optional="false"/>
+                    <persistence type="property"/>
+                    <defaultvalue>100</defaultvalue>
+                </attribute>
+                <attribute qualifier="migrationWorkers" type="java.lang.Integer">
+                    <modifiers optional="false"/>
+                    <persistence type="property"/>
+                    <defaultvalue>2</defaultvalue>
+                </attribute>
+                <attribute qualifier="referenceCatalogVersion" type="CatalogVersion">
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+        </itemtype>
     </itemtypes>
 </items>

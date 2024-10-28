@@ -1,3 +1,5 @@
+package mediamigration
+
 import de.hybris.platform.catalog.CatalogVersionService
 import de.hybris.platform.catalog.model.CatalogUnawareMediaModel
 import de.hybris.platform.catalog.model.CatalogVersionModel
@@ -7,6 +9,8 @@ import de.hybris.platform.core.model.media.MediaModel
 import de.hybris.platform.core.model.product.ProductModel
 import de.hybris.platform.core.servicelayer.data.PaginationData
 import de.hybris.platform.core.servicelayer.data.SearchPageData
+import de.hybris.platform.servicelayer.exceptions.ModelNotFoundException
+import de.hybris.platform.servicelayer.exceptions.UnknownIdentifierException
 import de.hybris.platform.servicelayer.media.MediaService
 import de.hybris.platform.servicelayer.model.ModelService
 import de.hybris.platform.servicelayer.search.FlexibleSearchQuery
@@ -145,7 +149,15 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         if (originalMedia instanceof CatalogUnawareMediaModel) {
             return originalMedia
         } else {
-            CatalogUnawareMediaModel catalogUnAwareMedia = modelService.create(CatalogUnawareMediaModel)
+            def query = new FlexibleSearchQuery('SELECT {PK} FROM {CatalogUnawareMedia} WHERE {code}=?code')
+            query.addQueryParameter('code', originalMedia.code)
+            CatalogUnawareMediaModel catalogUnAwareMedia
+            try {
+                catalogUnAwareMedia = flexibleSearchService.searchUnique(query)
+            } catch (UnknownIdentifierException | ModelNotFoundException ignored) {
+                catalogUnAwareMedia = modelService.create(CatalogUnawareMediaModel)
+            }
+
             catalogUnAwareMedia.code = originalMedia.code
             originalMedia.code = 'archived_' + originalMedia.code
             catalogUnAwareMedia.mediaFormat = originalMedia.mediaFormat
@@ -301,7 +313,14 @@ class MediaToCatalogUnawareMediaMigrationUtil {
                             LOG.info('Container is already migrated')
                             migratedMediaContainers.add(mediaContainer)
                         } else {
-                            CatalogUnawareMediaContainerModel catalogUnawareMediaContainer = modelService.create(CatalogUnawareMediaContainerModel)
+                            def query = new FlexibleSearchQuery('SELECT {PK} FROM {CatalogUnawareMediaContainer} WHERE {qualifier}=?qualifier')
+                            query.addQueryParameter('qualifier', mediaContainer.qualifier)
+                            CatalogUnawareMediaContainerModel catalogUnawareMediaContainer
+                            try {
+                                catalogUnawareMediaContainer = flexibleSearchService.searchUnique(query)
+                            } catch (UnknownIdentifierException | ModelNotFoundException ignored) {
+                                catalogUnawareMediaContainer = modelService.create(CatalogUnawareMediaContainerModel)
+                            }
                             def master = mediaContainer.master
                             // convert master media first if exists
                             def migratedMaster = master == null ? null : migrateMediaAttribute(master)
