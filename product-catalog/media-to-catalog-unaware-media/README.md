@@ -21,23 +21,19 @@ The first step for the using `CatalogUnawareMedia` for products is to introduce 
     ```
 2. Execute the `System Update` to ensure that the `CatalogUnawareMediaContainer` is available to your SAP Commerce persistence.
 
-After this, proceed ahead with the migration script.
+After this, proceed ahead with configuration of the migration cron job.
 
-## Migration of Media to Catalog Unaware Media & Media Container to Catalog Unaware Media Container
-The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration.impex) is a sample to migrates the media of `apparelProductCatalog` to CatalogAware Media. You can import this script to create the cron job and then manually execute it during the quiet business hours.
+## Configuring the Cron job for Migration of Media to Catalog Unaware Media & Media Container to Catalog Unaware Media Container
+The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration.impex) is a sample script as commented to create a cron job to migrate the media of `apparelProductCatalog` to CatalogAware Media. You can adjust this ImpEx script to create the cron job and then execute it during the quiet business hours with following adjustments:
+- Batch size to pick how many products to pick in one batch.
+- Migration workers to configure how many worker threads to use for migration.
+- Reference catalog version to configura the catalog version that has all accurate medias associated across the product catalog versions.
 
 <p>
-<img src="migration-cron-job.png" style="border: 2px;">
-<u><strong>Figure </strong> | Migration Cron Job</u>
+<img src="cron-job-configurations.png" style="border: 2px;">
+<u><strong>Figure </strong> | Migration Cron Job Configurations</u>
 </p>
 
-You can adjust the script for your usage by:
-- Updating the `id` and `version` of your online catalog version.
-- Updating the `Media` attributes of your product item model
-- Updating the `MediaCollection` attributes of your product item model
-- Updating to `MediaContainer` attributes of your product item model
-
-Feel free to enhance the script as per your need.
 
 ## Optimizations at source integration / user experience
 ### Backoffice
@@ -47,77 +43,13 @@ If you like to simplify the backoffice user interface to avoid mistakes from the
 If there are automations / integrations to create the product media for example: ImpEx, Cloud Hot Folders, etc; It is recommended that you correct the headers to ensure that the Media is created for product as `CatalogUnawareMedia` and the media container is created as `CatalogUnawareMediaContainer`.
 
 ### Media Conversion
-If you are using media conversion then make sure to create a class `CatalogUnawareConvertedMediaCreationStrategy` by overriding `DefaultConvertedMediaCreationStrategy` to ensure that your converted media are created as `CatalogUnawareMedia` as:
+The extension covers you if youn are using the media conversion functionality. With this the regular Media converts in the disired formats as regular media and the Catalog Unaware Media converts in the disired formats as catalog unaware media.
 
-```
-package com.sap.cx.boosters.commerce.media.migration.strategy;
-
-import de.hybris.platform.catalog.model.CatalogUnawareMediaModel;
-import de.hybris.platform.core.model.media.MediaModel;
-import de.hybris.platform.mediaconversion.conversion.DefaultConvertedMediaCreationStrategy;
-import de.hybris.platform.mediaconversion.model.ConversionMediaFormatModel;
-import de.hybris.platform.servicelayer.exceptions.ModelNotFoundException;
-import de.hybris.platform.servicelayer.media.MediaIOException;
-import org.apache.log4j.Logger;
-
-import java.io.InputStream;
-
-public class CatalogUnawareConvertedMediaCreationStrategy extends DefaultConvertedMediaCreationStrategy {
-
-    private static final Logger LOG = Logger.getLogger(CatalogUnawareConvertedMediaCreationStrategy.class);
-
-    @Override
-    public MediaModel createOrUpdate(final MediaModel parent, final ConversionMediaFormatModel format, final InputStream content)
-            throws MediaIOException {
-
-        if (parent instanceof CatalogUnawareMediaModel) {
-
-            MediaModel dmm;
-            try {
-                dmm = this.getMediaService().getMediaByFormat(parent.getMediaContainer(), format);
-                LOG.debug("Updating existing media '" + dmm + "'.");
-            } catch (final ModelNotFoundException e) {
-                dmm = this.getModelService().create(CatalogUnawareMediaModel.class);
-                dmm.setCode(this.createCode(parent, format));
-                dmm.setFolder(parent.getFolder());
-                dmm.setMediaContainer(parent.getMediaContainer());
-                dmm.setMediaFormat(format);
-
-                // additional
-                dmm.setAltText(parent.getAltText());
-                dmm.setDescription(parent.getDescription());
-            }
-
-            dmm.setOriginal(parent);
-            dmm.setOriginalDataPK(parent.getDataPK());
-            this.getModelService().save(dmm);
-
-            this.loadContents(dmm, parent, format, content);
-            this.getModelService().refresh(dmm);
-
-            return dmm;
-        } else {
-            return super.createOrUpdate(parent, format, content);
-        }
-    }
-}
-```
-
-Also register the following spring bean:
-
-```
-<alias name="catalogUnawareConvertedMediaCreationStrategy" alias="convertedMediaCreationStrategy"/>
-<bean id="catalogUnawareConvertedMediaCreationStrategy" class="com.sap.cx.boosters.commerce.media.migration.strategy.CatalogUnawareConvertedMediaCreationStrategy" parent="defaultConvertedMediaCreationStrategy"/>
-
-```
-
->**Note 1:** Please adjust package structure as per your project's package structure.
-
->**Note 2:** As an alternative, You can use the mediamigration extension available [here](./mediamigration), followed by a system update and execution of the `productMediaToCatalogAwareMediaMigrationCronJob` cron job.
+>**Note 2:** As an alternative, You can use the mediamigration extension available [here](./mediamigration), followed by a system update and configurion & execution of the `CatalogAwareToCatalogUnawareMediaMigrationCronJob` cron job with job as catalogAwareToCatalogUnawareMediaMigrationJob`.
 
 
 
 >**Disclaimers**
-> - This script creates a sample migration cron job that on execute migrates the media of `apparelProductCatelog`. This script has not been tested extensively on a productive environment. This is recommended to test the script extensively prior to execute it on a productive environment.
+> - This extension creates a sample migration cron job (if uncommented) that on execute migrates the media of `apparelProductCatelog`. This is recommended to test the migration extensively to identify appropriate configurations like batch size and number of workers, prior to execute it on a productive environment.
 > - This is recommended to execute such a migration in Off-Peak hours as this migration may impact customer experience.
 > - This is a reference created to share the knowledge based on the experience from past engagements. There is no dedicated support available on this script, neither from the author and not from SAP.
