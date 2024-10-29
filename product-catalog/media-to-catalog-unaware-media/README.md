@@ -22,6 +22,13 @@ The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration
 <u><strong>Figure </strong> | Migration Cron Job Configurations</u>
 </p>
 
+## Alternatives
+If you wish to use the migration job via Scripting engine, then you can use the [ImpEx Script](./mediamigration/resources/mediamigration/cron-jobs.impex) to create the cron job. This script has:
+- `apparelProductCatalog:Online` as the reference catalog version configured.
+- The batch size of 100 products
+- A total of 8 migration workers to process migration.
+
+Feel free to adjust these parameters in the script and import the ImpEx to create the cron job via scripting engine.
 
 ## Optimizations at source integration / user experience
 ### Backoffice
