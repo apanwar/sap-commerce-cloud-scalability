@@ -1,8 +1,10 @@
 package mediamigration
 
+
 import de.hybris.platform.catalog.CatalogVersionService
 import de.hybris.platform.catalog.model.CatalogUnawareMediaModel
 import de.hybris.platform.catalog.model.CatalogVersionModel
+import de.hybris.platform.core.Registry
 import de.hybris.platform.core.model.media.CatalogUnawareMediaContainerModel
 import de.hybris.platform.core.model.media.MediaContainerModel
 import de.hybris.platform.core.model.media.MediaModel
@@ -20,6 +22,10 @@ import de.hybris.platform.servicelayer.search.paginated.PaginatedFlexibleSearchS
 import de.hybris.platform.servicelayer.user.UserService
 import org.apache.commons.collections.CollectionUtils
 import org.slf4j.LoggerFactory
+
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class MediaToCatalogUnawareMediaMigrationUtil {
 
@@ -371,7 +377,7 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         }
     }
 
-    def migrateProductMediaForCatalogVersion(CatalogVersionModel catalogVersion, int batchSize) {
+    def migrateProductMediaForCatalogVersion(CatalogVersionModel catalogVersion, int batchSize, int migrationWorkers) {
         try {
             def query = 'SELECT {' + ProductModel.PK + '} FROM {' + ProductModel._TYPECODE + '} WHERE {' + ProductModel.CATALOGVERSION + '} =?' + ProductModel.CATALOGVERSION + ' ORDER BY { ' + ProductModel.CREATIONTIME + '}'
 
@@ -389,32 +395,25 @@ class MediaToCatalogUnawareMediaMigrationUtil {
             def pfsParam = new PaginatedFlexibleSearchParameter()
             pfsParam.flexibleSearchQuery = fsq
             pfsParam.searchPageData = searchPageData
-            def productMediaAttributes = [ProductModel.PICTURE, ProductModel.THUMBNAIL]
-            def productMediaCollectionAttributes = [ProductModel.DETAIL, ProductModel.LOGO, ProductModel.NORMAL, ProductModel.OTHERS, ProductModel.THUMBNAILS]
-            def productMediaContainerAttributes = [ProductModel.GALLERYIMAGES]
-            userService.setCurrentUser(userService.getAdminUser())
 
+            userService.setCurrentUser(userService.getAdminUser())
+            List<Future<Void>> futures = new ArrayList<>()
+            def executorService = Executors.newFixedThreadPool(migrationWorkers)
             while (true) {
                 LOG.info('*******************************************')
                 LOG.info('Starting migration of batch: {}', searchPageData.pagination.currentPage + 1)
                 LOG.info('*******************************************')
                 searchPageData = paginatedFlexibleSearchService.<ProductModel> search(pfsParam)
                 searchPageData.results.each {
-                    LOG.info('Processing media migration for product [{}]', it.code)
-                    migrateMediaAttributes(it, productMediaAttributes, productMediaCollectionAttributes, productMediaContainerAttributes)
+                    futures.add(executorService.submit(new MediaMigrationWorker(it)))
+                }
 
-                    productMediaAttributes.each { attribute ->
-                        replaceMediaInCatalogVersions(it, attribute)
+                futures.each {
+                    try {
+                        it.get()
+                    } catch (Exception exception) {
+                        LOG.error('Error occurred while migrating media.', exception)
                     }
-                    migrateMediaCollectionAttributes(it, productMediaCollectionAttributes, productMediaContainerAttributes)
-                    productMediaCollectionAttributes.each { attribute ->
-                        replaceMediaInCatalogVersions(it, attribute)
-                    }
-                    migrateMediaContainerAttributes(it, productMediaContainerAttributes)
-                    productMediaContainerAttributes.each { attribute ->
-                        replaceMediaInCatalogVersions(it, attribute)
-                    }
-                    LOG.info('Processed media migration for product [{}]', it.code)
                 }
 
                 LOG.info('*******************************************')
@@ -433,9 +432,49 @@ class MediaToCatalogUnawareMediaMigrationUtil {
         }
     }
 
+    class MediaMigrationWorker implements Callable<Void> {
+
+        def MEDIA_ATTRIBUTES = [ProductModel.PICTURE, ProductModel.THUMBNAIL]
+        def MEDIA_COLLECTION_ATTRIBUTES = [ProductModel.DETAIL, ProductModel.LOGO, ProductModel.NORMAL, ProductModel.OTHERS, ProductModel.THUMBNAILS]
+        def MEDIA_CONTAINER_ATTRIBUTES = [ProductModel.GALLERYIMAGES]
+
+        def LOG = LoggerFactory.getLogger(com.sap.cx.boosters.commerce.media.migration.runner.MediaMigrationWorker)
+
+        private final ProductModel product
+
+        MediaMigrationWorker(ProductModel product) {
+            this.product = product
+        }
+
+        @Override
+        Void call() throws Exception {
+            Registry.activateMasterTenant()
+            LOG.info('[Product-{}] - Starting migration', this.product.code)
+            try {
+                // Migrate the media attributes for the product
+                migrateMediaAttributes(product, MEDIA_ATTRIBUTES, MEDIA_COLLECTION_ATTRIBUTES, MEDIA_CONTAINER_ATTRIBUTES)
+                // Replace the migrated media in the products of other catalog versions
+                MEDIA_ATTRIBUTES.each { replaceMediaInCatalogVersions(product, it) }
+
+                // Migrate the media collection attributes for the product
+                migrateMediaCollectionAttributes(product, MEDIA_COLLECTION_ATTRIBUTES, MEDIA_CONTAINER_ATTRIBUTES)
+                // Replace the migrated media collections in the products of other catalog versions
+                MEDIA_COLLECTION_ATTRIBUTES.each { replaceMediaInCatalogVersions(product, it) }
+
+                // Migrate the media collection attributes for the product
+                migrateMediaContainerAttributes(product, MEDIA_CONTAINER_ATTRIBUTES)
+                // Replace the migrated media containers in the products of other catalog versions
+                MEDIA_CONTAINER_ATTRIBUTES.each { replaceMediaInCatalogVersions(product, it) }
+
+            } finally {
+                LOG.info('[Product-{}] - Ending migration.', this.product.code)
+            }
+            return null
+        }
+    }
+
 }
 
-def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('apparelProductCatalog', 'Online')
 
 def migrationUtility = MediaToCatalogUnawareMediaMigrationUtil.getInstance()
 
@@ -445,4 +484,6 @@ migrationUtility.mediaService = spring.getBean('mediaService')
 migrationUtility.paginatedFlexibleSearchService = spring.getBean('paginatedFlexibleSearchService')
 migrationUtility.userService = spring.getBean('userService')
 
-migrationUtility.migrateProductMediaForCatalogVersion(catalogVersion, 100)
+def catalogVersion = (catalogVersionService as CatalogVersionService).getCatalogVersion('apparelProductCatalog', 'Online')
+migrationUtility.migrateProductMediaForCatalogVersion(catalogVersion, 100, 8)
+
