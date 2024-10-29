@@ -13,7 +13,6 @@ The first step for the using `CatalogUnawareMedia` for products is to introduce 
 
 ## Configuring the Cron job for Migration of Media to Catalog Unaware Media & Media Container to Catalog Unaware Media Container
 The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration.impex) is a sample script as commented to create a cron job to migrate the media of `apparelProductCatalog` to CatalogAware Media. You can adjust this ImpEx script to create the cron job and then execute it during the quiet business hours with following adjustments:
-- The list of media, media collection and media container attributes used in the data model. These can be updated in the constants `MEDIA_ATTRIBUTES`, `MEDIA_COLLECTION_ATTRIBUTES`, `MEDIA_CONTAINER_ATTRIBUTES
 - Batch size to pick how many products to pick in one batch.
 - Migration workers to configure how many worker threads to use for migration.
 - Reference catalog version to configura the catalog version that has all accurate medias associated across the product catalog versions.
@@ -25,6 +24,7 @@ The [ImpEx script](./mediamigration/resources/impex/essentialdata_mediamigration
 
 ## Alternatives
 If you wish to use the migration job via Scripting engine, then you can use the [ImpEx Script](./mediamigration/resources/mediamigration/cron-jobs.impex) to create the cron job. This script has:
+- The list of media, media collection and media container attributes used in the data model. These can be updated in the constants `MEDIA_ATTRIBUTES`, `MEDIA_COLLECTION_ATTRIBUTES`, `MEDIA_CONTAINER_ATTRIBUTES`
 - `apparelProductCatalog:Online` as the reference catalog version configured.
 - The batch size of 100 products
 - A total of 8 migration workers to process migration.
