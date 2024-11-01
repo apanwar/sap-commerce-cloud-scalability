@@ -1,0 +1,11 @@
+#Ant properties
+#Mon Sep 30 11:17:33 CEST 2024
+version.api=2211
+vendor=hybris
+group.id=de.hybris.platform
+name=azureoptimizationsreadonly
+description=azureoptimizationsreadonly
+builddate=20240930 1117
+releasedate=20240910 1657
+version=2211.29
+module.name=platform-module
