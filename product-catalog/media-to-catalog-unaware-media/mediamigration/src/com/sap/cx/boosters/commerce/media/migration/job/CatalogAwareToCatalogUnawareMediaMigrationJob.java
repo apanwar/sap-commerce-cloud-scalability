@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CatalogAwareToCatalogUnawareMediaMigrationJob extends AbstractJobPerformable<CatalogAwareToCatalogUnawareMediaMigrationCronJobModel> {
@@ -36,6 +37,7 @@ public class CatalogAwareToCatalogUnawareMediaMigrationJob extends AbstractJobPe
     @Override
     public PerformResult perform(CatalogAwareToCatalogUnawareMediaMigrationCronJobModel cronJob) {
 
+        // Initialize pagination data
         var paginationData = new PaginationData();
         paginationData.setPageSize(cronJob.getBatchSize());
         paginationData.setCurrentPage(0);
@@ -43,6 +45,7 @@ public class CatalogAwareToCatalogUnawareMediaMigrationJob extends AbstractJobPe
         var searchPageData = new SearchPageData<ProductModel>();
         searchPageData.setPagination(paginationData);
 
+        // Create flexible search query
         var fsq = new FlexibleSearchQuery(QUERY);
         fsq.addQueryParameter(ProductModel.CATALOGVERSION, cronJob.getReferenceCatalogVersion());
         fsq.setDisableSearchRestrictions(true);
@@ -51,42 +54,83 @@ public class CatalogAwareToCatalogUnawareMediaMigrationJob extends AbstractJobPe
         pfsParam.setFlexibleSearchQuery(fsq);
         pfsParam.setSearchPageData(searchPageData);
 
+        // Initialize executor service
         ExecutorService executorService = Executors.newFixedThreadPool(cronJob.getMigrationWorkers());
-        List<Future<Void>> futures;
-
         AtomicReference<CronJobResult> result = new AtomicReference<>(CronJobResult.SUCCESS);
+        AtomicReference<CronJobStatus> status = new AtomicReference<>(CronJobStatus.FINISHED);
 
-        while (true) {
-            LOG.info("Starting migration of batch: {}", searchPageData.getPagination().getCurrentPage() + 1);
-            searchPageData = paginatedFlexibleSearchService.search(pfsParam);
-            if (BooleanUtils.isTrue(cronJob.getRequestAbort())) {
-                LOG.info("******** Media migration aborted. ********");
-                executorService.shutdown();
-                break;
-            } else {
-                futures = searchPageData.getResults().stream().map(product -> executorService.submit(new MediaMigrationWorker(product, mediaMigrationProcessor))).toList();
-                futures.forEach(future -> {
-                    try {
-                        future.get();
-                    } catch (Exception exception) {
-                        LOG.error("Error occurred while migrating media.", exception);
-                        result.set(CronJobResult.FAILURE);
-                    }
-                });
+        try {
+            while (true) {
+                LOG.info("Starting migration of batch: {}", searchPageData.getPagination().getCurrentPage() + 1);
+
+                // Fetch the current batch of products
+                searchPageData = paginatedFlexibleSearchService.search(pfsParam);
+
+                if (BooleanUtils.isTrue(cronJob.getRequestAbort())) {
+                    LOG.info("******** Media migration aborted. ********");
+                    shutdownExecutor(executorService);
+                    result.set(CronJobResult.FAILURE);
+                    status.set(CronJobStatus.ABORTED);
+                    break;
+                }
+
+                // Submit tasks to executor
+                List<Future<Void>> futures = searchPageData.getResults()
+                        .stream()
+                        .map(product -> executorService.submit(
+                                new MediaMigrationWorker(product, mediaMigrationProcessor)))
+                        .toList();
+
+                // Process task results
+                processFutures(futures, result, status);
+
                 LOG.info("Finished migration of batch: {}", searchPageData.getPagination().getCurrentPage() + 1);
-            }
 
-            if (searchPageData.getPagination().getHasNext()) {
-                searchPageData.getPagination().setCurrentPage(searchPageData.getPagination().getCurrentPage() + 1);
-                pfsParam.setSearchPageData(searchPageData);
-            } else {
-                LOG.info("******** Media migration completed. ********");
-                executorService.shutdown();
-                break;
+                // Check if there are more batches
+                if (searchPageData.getPagination().getHasNext()) {
+                    searchPageData.getPagination().setCurrentPage(searchPageData.getPagination().getCurrentPage() + 1);
+                    pfsParam.setSearchPageData(searchPageData);
+                } else {
+                    LOG.info("******** Media migration completed. ********");
+                    break;
+                }
             }
+        } finally {
+            // Ensure executor is shutdown
+            shutdownExecutor(executorService);
         }
 
-        return new PerformResult(result.get(), CronJobStatus.FINISHED);
+        return new PerformResult(result.get(), status.get());
+    }
+
+    /**
+     * Shuts down the ExecutorService gracefully or forcibly if necessary.
+     */
+    private void shutdownExecutor(ExecutorService executorService) {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Processes the results of the futures and updates the cron job status/result.
+     */
+    private void processFutures(List<Future<Void>> futures, AtomicReference<CronJobResult> result, AtomicReference<CronJobStatus> status) {
+        for (Future<Void> future : futures) {
+            try {
+                future.get();
+            } catch (Exception e) {
+                LOG.error("Error occurred while migrating media.", e);
+                result.set(CronJobResult.FAILURE);
+                status.set(CronJobStatus.UNKNOWN);
+            }
+        }
     }
 
     @Override
