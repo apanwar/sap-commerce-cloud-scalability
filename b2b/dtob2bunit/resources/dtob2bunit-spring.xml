@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/util
+           http://www.springframework.org/schema/util/spring-util.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+	<!-- DTO CACHE SERVICE -->
+	<alias name="defaultDtoCacheService" alias="dtoCacheService"/>
+	<bean id="defaultDtoCacheService" class="com.sap.dto.b2bunit.service.DefaultDtoCacheService">
+		<property name="cacheRegions" ref="dtoCacheRegions"/>
+		<property name="commonI18NService" ref="commonI18NService"/>
+		<property name="baseSiteService" ref="baseSiteService"/>
+		<property name="invalidationDeploymentCodes">
+			<set>
+				<value>5</value> <!-- THIS IS GROUP|ORGANIZATION|B2BUNIT-->
+				<!--				<value>1</value> &lt;!&ndash; THIS IS PRODUCT &ndash;&gt;-->
+				<!--				<value>142</value> &lt;!&ndash; THIS IS CATEGORY &ndash;&gt;-->
+				<!--				<value>1084</value> &lt;!&ndash; THIS IS COMPONENT &ndash;&gt;-->
+				<!--				<value>5010</value> &lt;!&ndash; THIS IS ProductPromotio &ndash;&gt;-->
+			</set>
+		</property>
+	</bean>
+
+	<alias name="defaultDtoCacheRegions" alias="dtoCacheRegions"/>
+	<util:list id="defaultDtoCacheRegions">
+		<ref bean="dtoB2BUnitCacheRegion"/>
+	</util:list>
+
+	<bean id="b2bUnitPopulatorAspect" class="com.sap.dto.b2bunit.aop.B2BUnitPopulatorAspect">
+		<property name="cacheName" value="dtoB2BUnitCacheRegion"/>
+		<property name="dtoCacheService" ref="dtoCacheService"/>
+	</bean>
+
+
+	<aop:config proxy-target-class="true">
+
+		<aop:aspect id="b2bUnitPopulatorAspectAOP" ref="b2bUnitPopulatorAspect">
+			<aop:around pointcut="bean(b2bUnitPopulator)" method="populate"/>
+		</aop:aspect>
+
+	</aop:config>
+
+
+
+
+</beans>

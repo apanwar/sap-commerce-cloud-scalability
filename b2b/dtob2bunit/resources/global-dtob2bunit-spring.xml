@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:c="http://www.springframework.org/schema/c"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+	<!-- Solr facet search config cache -->
+	<bean name="dtoB2BUnitCacheRegion" class="de.hybris.platform.regioncache.region.impl.EHCacheRegion">
+		<constructor-arg name="name" value="dtoB2BUnitCacheRegion" />
+		<constructor-arg name="maxEntries" value="${regioncache.dtoB2BUnitCacheRegion.maxEntries}" />
+		<constructor-arg name="evictionPolicy" value="${regioncache.dtoB2BUnitCacheRegion.evictionPolicy}" />
+		<constructor-arg name="statsEnabled" value="${regioncache.dtoB2BUnitCacheRegion.stats.enables}" />
+		<constructor-arg name="exclusiveComputation" value="${regioncache.dtoB2BUnitCacheRegion.stats.exclusiveComputation}" />
+		<constructor-arg name="ttlSeconds" value="${regioncache.dtoB2BUnitCacheRegion.ttl}"/>
+		<property name="handledTypes">
+			<array>
+				<value>__DBO_B2BUNIT_CACHE_REGION__</value>
+			</array>
+		</property>
+	</bean>
+
+	<bean id="dtoB2BUnitCacheRegionRegistrar" class="de.hybris.platform.regioncache.region.CacheRegionRegistrar"
+		  c:region-ref="dtoB2BUnitCacheRegion" />
+
+
+</beans>
